@@ -12,7 +12,10 @@ seaborn>=0.11.2
 # Машинное и глубинное обучение
 scikit-learn>=1.0.0
 # tensorflow>=2.9.0 # или, альтернативно, PyTorch
-torch>=1.12.0    # PyTorch
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch>=1.12.0    # PyTorch с поддержкой CUDA
+torchvision>=0.13.0
+torchaudio>=0.12.0
 
 # Работа с изображениями
 pillow>=9.0.0
@@ -39,6 +42,8 @@ plotly>=5.9.0
 dash>=2.6.0
 
 kagglehub>=0.2.0
+datasets>=2.10.0
+accelerate>=0.26.0
 
 nbformat
 

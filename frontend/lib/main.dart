@@ -39,6 +39,7 @@ class _HomePageState extends State<HomePage> {
   List<Widget> get _pages => [
         HomePageContent(counter: _counter, onIncrement: _incrementCounter),
         const ProfilePage(),
+        const AddPage(),
         const SettingsPage(),
       ];
 
@@ -60,7 +61,7 @@ class _HomePageState extends State<HomePage> {
               titleSpacing: 24,
               leadingWidth: 72,
               title: Text(
-                'главная',
+                'flutter app',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               actions: [
@@ -94,21 +95,20 @@ class _HomePageState extends State<HomePage> {
                 onPressed: () => setState(() => _selectedIndex = 1),
                 color: _selectedIndex == 1 ? Theme.of(context).primaryColor : null,
               ),
-              const SizedBox(width: 40), // пространство для FAB
               IconButton(
-                icon: const Icon(Icons.settings),
+                icon: const Icon(Icons.add),
                 onPressed: () => setState(() => _selectedIndex = 2),
                 color: _selectedIndex == 2 ? Theme.of(context).primaryColor : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.calendar_today),
+                onPressed: () => setState(() => _selectedIndex = 3),
+                color: _selectedIndex == 3 ? Theme.of(context).primaryColor : null,
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }

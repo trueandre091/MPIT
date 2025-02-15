@@ -16,10 +16,10 @@ class HomePageContent extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          const Text('Счётчик:'),
+          Text('счётчик:', style: Theme.of(context).textTheme.bodyMedium),
           Text(
             '$counter',
-            style: Theme.of(context).textTheme.headlineMedium,
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
         ],
       ),
@@ -32,8 +32,19 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Профиль'),
+    return Center(
+      child: Text('профиль', style: Theme.of(context).textTheme.bodyMedium),
+    );
+  }
+}
+
+class AddPage extends StatelessWidget {
+  const AddPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text('добавить', style: Theme.of(context).textTheme.bodyMedium),
     );
   }
 }
@@ -43,8 +54,8 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Настройки'),
+    return Center(
+      child: Text('календарь', style: Theme.of(context).textTheme.bodyMedium),
     );
   }
 }
