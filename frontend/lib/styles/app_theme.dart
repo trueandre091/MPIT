@@ -1,78 +1,88 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-class ThemeProvider with ChangeNotifier {
-  bool _isDarkMode = false;
+ThemeData appTheme() {
+  return ThemeData(
+    splashFactory: NoSplash.splashFactory,
 
-  // Геттер для текущего состояния темы
-  bool get isDarkMode => _isDarkMode;
+    // Цветовая палитра
+    primaryColor: Color.fromRGBO(99, 119, 85, 1),
+    shadowColor: Color.fromRGBO(49, 61, 48, 1),
+    focusColor: Color.fromRGBO(248, 214, 210, 1),
+    highlightColor: Color.fromRGBO(236, 132, 130, 1),
+    canvasColor: Color.fromRGBO(249, 241, 206, 1),
+    splashColor: Colors.transparent,
 
-  // Конструктор для загрузки сохранённой темы
-  ThemeProvider() {
-    _loadTheme();
-  }
+    primaryColorLight: Colors.white,
+    primaryColorDark: Color.fromRGBO(44, 40, 40, 1),
+    cardColor: Colors.black,
 
-  // Метод для переключения темы
-  void toggleTheme() async {
-    _isDarkMode = !_isDarkMode;
-    await _saveTheme(); // Сохраняем новое состояние
-    notifyListeners(); // Уведомляем подписчиков об изменении
-  }
-
-  // Метод для загрузки сохранённой темы
-  Future<void> _loadTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isDarkMode = prefs.getBool('isDarkMode') ?? false; // Значение по умолчанию: false
-    notifyListeners();
-  }
-
-  // Метод для сохранения текущей темы
-  Future<void> _saveTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkMode', _isDarkMode);
-  }
-}
-
-class AppThemes {
-  static final lightTheme = ThemeData(
-    // яркость
-    brightness: Brightness.light,
-    // цвет
-    primaryColor: const Color.fromARGB(255, 109, 235, 93),
-    // схема цветов
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color.fromARGB(255, 109, 235, 93),
-      brightness: Brightness.light,
-    ),
-
-    // текст
+    // Стили текста
     textTheme: TextTheme(
-      titleLarge: GoogleFonts.montserrat(
-        fontSize: 24,
-        fontWeight: FontWeight.w500,
+      displayLarge: TextStyle(
+        fontSize: 60.0,
+        fontFamily: 'Mulish',
+        fontWeight: FontWeight.bold,
+        color: Color.fromRGBO(44, 40, 40, 1),
       ),
-      // заголовок
-      displayLarge: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.bold),
-      // текст
-      bodyLarge: GoogleFonts.montserrat(fontSize: 16, color: Colors.black),
-    ),
-  );
-
-  static final darkTheme = ThemeData(
-    brightness: Brightness.dark,
-    primaryColor: const Color.fromARGB(255, 117, 204, 105),
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color.fromARGB(255, 117, 204, 105),
-      brightness: Brightness.dark,
-    ),
-    textTheme: TextTheme(
-      titleLarge: GoogleFonts.montserrat(
-        fontSize: 24,
-        fontWeight: FontWeight.w500,
+      displayMedium: TextStyle(
+        fontSize: 48.0,
+        fontFamily: 'Mulish',
+        fontWeight: FontWeight.bold,
+        color: Color.fromRGBO(44, 40, 40, 1),
       ),
-      displayLarge: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-      bodyLarge: GoogleFonts.montserrat(fontSize: 16, color: Colors.white),
+      displaySmall: TextStyle(
+        fontSize: 36.0,
+        fontFamily: 'Mulish',
+        fontWeight: FontWeight.bold,
+        color: Color.fromRGBO(44, 40, 40, 1),
+      ),
+      labelLarge: TextStyle(
+        fontSize: 24.0,
+        fontFamily: 'Mulish',
+        fontWeight: FontWeight.normal,
+        color: Color.fromRGBO(44, 40, 40, 1),
+      ),
+      labelMedium: TextStyle(
+        fontSize: 20.0,
+        fontFamily: 'Mulish',
+        fontWeight: FontWeight.normal,
+        color: Color.fromRGBO(44, 40, 40, 1),
+      ),
+      labelSmall: TextStyle(
+        fontSize: 16.0,
+        fontFamily: 'Mulish',
+        fontWeight: FontWeight.normal,
+        color: Color.fromRGBO(44, 40, 40, 1),
+      ),
+      bodyLarge: TextStyle(
+        fontSize: 30.0,
+        fontFamily: 'Mulish',
+        fontWeight: FontWeight.bold,
+        color: Color.fromRGBO(44, 40, 40, 1),
+      ),
+      bodyMedium: TextStyle(
+        fontSize: 20.0,
+        fontFamily: 'Mulish',
+        fontWeight: FontWeight.bold,
+        color: Color.fromRGBO(44, 40, 40, 1),
+      ),
+      bodySmall: TextStyle(
+        fontSize: 10.0,
+        fontFamily: 'Mulish',
+        fontWeight: FontWeight.bold,
+        color: Color.fromRGBO(44, 40, 40, 1),
+      ),
+      titleLarge: TextStyle(
+        fontSize: 40.0,
+        fontFamily: 'MuseoModerno',
+        fontWeight: FontWeight.bold,
+        color: Color.fromRGBO(44, 40, 40, 1),
+      ),
+      titleMedium: TextStyle(
+        fontSize: 20.0,
+        fontFamily: 'Mulish',
+        color: Color.fromRGBO(44, 40, 40, 1),
+      ),
     ),
   );
 }
