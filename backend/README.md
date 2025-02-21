@@ -99,8 +99,8 @@ uvicorn main:app --reload
 
 Приложение будет доступно по адресу: `http://localhost:8000`
 
-Swagger UI: `http://localhost:8000/api/v1/docs`
-Redoc: `http://localhost:8000/api/v1/redoc`
+Swagger UI: `http://localhost:8000/docs`
+Redoc: `http://localhost:8000/redoc`
 
 ## Структура проекта
 
@@ -114,15 +114,6 @@ Redoc: `http://localhost:8000/api/v1/redoc`
 ├── .env               # Конфигурация
 ├── main.py            # Точка входа
 └── requirements.txt   # Зависимости
-```
-
-## Генерация секретного ключа
-
-Для генерации безопасного секретного ключа используйте Python:
-
-```python
-import secrets
-print(secrets.token_hex(32))
 ```
 
 ## Создание первого администратора
