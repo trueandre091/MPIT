@@ -65,24 +65,32 @@ cp .env.example .env
 ```
 3. Отредактируйте `.env` файл:
 ```env
-# База данных
-DATABASE_URL=postgresql://user:password@localhost:5432/dbname
-
-# Безопасность
-SECRET_KEY=your-secret-key-here  # Сгенерируйте свой ключ
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
+# Настройки окружения
+ENVIRONMENT=development  # development или production
 
 # Настройки приложения
-APP_NAME=FastAPI Backend
+APP_NAME=FastAPI Template
 APP_VERSION=1.0.0
-ENVIRONMENT=development
-DEBUG=True
-API_PREFIX=/api/v1
 
-# CORS
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+# Настройки сервера
+HOST=localhost  # development: localhost, production: 0.0.0.0
+PORT=8000
+
+# Настройки базы данных
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your-password-here
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=fastapi_db
+
+# JWT settings
+SECRET_KEY=your-secret-key-here  # Изменить в production!
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1  # development: 30, production: 60
+
+# CORS settings (разделять запятыми)
+DEV_CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+PROD_CORS_ORIGINS=https://your-production-domain.com
 ```
 
 ### 5. Применение миграций
