@@ -136,24 +136,24 @@ UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
 
 ### Аутентификация
 
-- `POST /api/v1/auth/register` - Регистрация нового пользователя
-- `POST /api/v1/auth/login` - Вход в систему
-- `POST /api/v1/auth/logout` - Выход из системы
-- `POST /api/v1/auth/refresh` - Обновление токенов
-- `GET /api/v1/auth/me` - Информация о текущем пользователе
+- `POST /api/auth/register` - Регистрация нового пользователя
+- `POST /api/auth/login` - Вход в систему
+- `POST /api/auth/logout` - Выход из системы
+- `POST /api/auth/refresh` - Обновление токенов
+- `GET /api/auth/me` - Информация о текущем пользователе
 
 ### Сессии
 
-- `GET /api/v1/sessions/me` - Список активных сессий
-- `DELETE /api/v1/sessions/{session_id}` - Удаление конкретной сессии
-- `DELETE /api/v1/sessions/me/all` - Удаление всех сессий пользователя
+- `GET /api/sessions/me` - Список активных сессий
+- `DELETE /api/sessions/{session_id}` - Удаление конкретной сессии
+- `DELETE /api/sessions/me/all` - Удаление всех сессий пользователя
 
 ### Пользователи (только для админов)
 
-- `GET /api/v1/users` - Список всех пользователей
-- `GET /api/v1/users/{user_id}` - Информация о пользователе
-- `PATCH /api/v1/users/{user_id}` - Обновление пользователя
-- `DELETE /api/v1/users/{user_id}` - Удаление пользователя
+- `GET /api/users` - Список всех пользователей
+- `GET /api/users/{user_id}` - Информация о пользователе
+- `PATCH /api/users/{user_id}` - Обновление пользователя
+- `DELETE /api/users/{user_id}` - Удаление пользователя
 
 ## Безопасность
 
