@@ -1,6 +1,6 @@
-# FastAPI Backend Template для хакатонов
+# FastAPI Backend
 
-Готовый шаблон backend-приложения на FastAPI с реализованной системой аутентификации, сессиями и ролями пользователей.
+backend-приложение на FastAPI с реализованной системой аутентификации, сессиями и ролями пользователей.
 
 ## Основные возможности
 
@@ -53,7 +53,7 @@ pip install -r requirements.txt
 
 ### 4. Настройка базы данных
 
-1. Создайте базу данных PostgreSQL (либо введите в терминале команду ниже после пункта 3)
+1. Создайте базу данных PostgreSQL (либо введите в терминале команду ниже **, но только после настройки .env (п. 3)!**)
 
 ```bash
 python scripts\create_database.py
@@ -107,8 +107,8 @@ uvicorn main:app --reload
 
 Приложение будет доступно по адресу: `http://localhost:8000`
 
-Swagger UI: `http://localhost:8000/api/v1/docs`
-Redoc: `http://localhost:8000/api/v1/redoc`
+Swagger UI: `http://localhost:8000/docs`
+Redoc: `http://localhost:8000/redoc`
 
 ## Структура проекта
 
@@ -122,15 +122,6 @@ Redoc: `http://localhost:8000/api/v1/redoc`
 ├── .env               # Конфигурация
 ├── main.py            # Точка входа
 └── requirements.txt   # Зависимости
-```
-
-## Генерация секретного ключа
-
-Для генерации безопасного секретного ключа используйте Python:
-
-```python
-import secrets
-print(secrets.token_hex(32))
 ```
 
 ## Создание первого администратора
@@ -170,9 +161,6 @@ UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
 - Используется система JWT с access и refresh токенами
 - Access token действителен 30 минут
 - Refresh token действителен 7 дней
-- Каждая сессия привязана к устройству пользователя
-- Поддерживается одновременная работа с нескольких устройств
-- Возможность завершения всех сессий кроме текущей
 
 ## Дополнительные возможности
 
@@ -207,7 +195,3 @@ UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
    ```bash
    alembic downgrade -1
    ```
-
-## Лицензия
-
-MIT 
