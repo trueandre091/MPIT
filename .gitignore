@@ -1,1 +1,4 @@
 /.idea
+/backend/schemas/__pycache__
+/backend/api_descriptions/__pycache__
+/backend/routers/__pycache__
