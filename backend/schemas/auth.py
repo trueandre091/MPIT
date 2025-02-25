@@ -21,12 +21,48 @@ class UserBase(BaseModel):
 class UserResponse(UserBase):
     id: int = Field(..., description="ID пользователя")
     is_active: bool = Field(default=True, description="Статус активности")
+    role: str = Field(..., description="Роль пользователя")
+    created_at: datetime = Field(..., description="Дата создания")
+    updated_at: datetime = Field(..., description="Дата последнего обновления")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "email": "user@example.com",
+                "full_name": "Иван Иванов",
+                "is_active": True,
+                "role": "user",
+                "created_at": "2024-02-19T12:00:00",
+                "updated_at": "2024-02-19T12:00:00"
+            }
+        }
+    }
 
 class Token(BaseModel):
     access_token: str = Field(..., description="JWT токен доступа")
     refresh_token: str = Field(..., description="Refresh токен для обновления access токена")
     token_type: str = Field(..., description="Тип токена (bearer)")
     user: UserResponse = Field(..., description="Информация о пользователе")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "token_type": "bearer",
+                "user": {
+                    "id": 1,
+                    "email": "user@example.com",
+                    "full_name": "Иван Иванов",
+                    "is_active": True,
+                    "role": "user",
+                    "created_at": "2024-02-19T12:00:00",
+                    "updated_at": "2024-02-19T12:00:00"
+                }
+            }
+        }
+    }
 
 class TokenData(BaseModel):
     email: Optional[str] = None
@@ -94,21 +130,93 @@ class RegistrationForm(OAuth2PasswordRequestForm):
             )
         return v
 
-class UserCreate(UserAuth):
+class UserCreate(BaseModel):
+    email: EmailStr = Field(
+        ..., 
+        description="Email пользователя",
+        examples=["user@example.com"]
+    )
+    password: str = Field(
+        ..., 
+        min_length=8,
+        max_length=64,
+        description="Пароль пользователя",
+        examples=["Password123!"]
+    )
     full_name: str = Field(
         ..., 
         min_length=2,
         max_length=50,
-        description="Полное имя пользователя (от 2 до 50 символов)",
+        description="Полное имя пользователя",
         examples=["Иван Иванов"]
     )
     
     @validator('full_name')
-    def full_name_validation(cls, v):
-        if not re.match(r'^[а-яА-Яa-zA-Z\s]{2,50}$', v):
-            raise ValueError(
-                'Имя должно содержать:\n'
-                '- Только буквы (русские или английские) и пробелы\n'
-                '- Длину от 2 до 50 символов'
-            )
-        return ' '.join(v.split()) 
+    def validate_full_name(cls, v):
+        if not v.strip():
+            raise ValueError("Имя не может быть пустым")
+        
+        v = v.strip()
+        errors = []
+        
+        if len(v) < 2:
+            errors.append("Имя должно содержать минимум 2 символа")
+        if len(v) > 50:
+            errors.append("Имя не может быть длиннее 50 символов")
+        if not all(c.isalpha() or c.isspace() for c in v):
+            errors.append("Имя может содержать только буквы и пробелы")
+        
+        if errors:
+            raise ValueError({"field": "full_name", "errors": errors})
+        
+        return ' '.join(v.split())
+
+    @validator('password')
+    def validate_password(cls, v):
+        errors = []
+        
+        if len(v) < 8:
+            errors.append("Минимальная длина пароля - 8 символов")
+        if len(v) > 64:
+            errors.append("Максимальная длина пароля - 64 символа")
+        if not any(c.isupper() for c in v):
+            errors.append("Пароль должен содержать хотя бы одну заглавную букву (A-Z)")
+        if not any(c.islower() for c in v):
+            errors.append("Пароль должен содержать хотя бы одну строчную букву (a-z)")
+        if not any(c.isdigit() for c in v):
+            errors.append("Пароль должен содержать хотя бы одну цифру (0-9)")
+        if not any(c in "!@#$%^&*(),.?\":{}|<>" for c in v):
+            errors.append("Пароль должен содержать хотя бы один специальный символ (!@#$%^&*(),.?\":{}|<>)")
+        
+        if errors:
+            raise ValueError({"field": "password", "errors": errors})
+        
+        return v
+
+    @validator('email')
+    def validate_email(cls, v):
+        errors = []
+        
+        if not v:
+            errors.append("Email не может быть пустым")
+        elif '@' not in v:
+            errors.append("Email должен содержать символ @")
+        elif '.' not in v:
+            errors.append("Email должен содержать доменную часть")
+        elif len(v) > 255:
+            errors.append("Email не может быть длиннее 255 символов")
+        
+        if errors:
+            raise ValueError({"field": "email", "errors": errors})
+        
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "email": "user@example.com",
+                "password": "Password123!",
+                "full_name": "Иван Иванов"
+            }
+        }
+    }

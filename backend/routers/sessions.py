@@ -5,18 +5,15 @@ from typing import List
 from database import get_db
 from models.session import Session as DbSession
 from models.user import User
-from schemas.auth import SessionInfo, SessionList, SessionResponse, Token
+from schemas.auth import SessionInfo, SessionList, SessionResponse
 from routers.auth import get_current_user
-from services.token import token_service
 from api_descriptions.sessions import (
     get_sessions_description,
     terminate_session_description,
     terminate_all_sessions_description,
-    refresh_session_description,
     get_sessions_responses,
     terminate_session_responses,
-    terminate_all_sessions_responses,
-    refresh_session_responses
+    terminate_all_sessions_responses
 )
 
 router = APIRouter()
@@ -106,80 +103,4 @@ async def terminate_all_sessions(
 
     return {
         "message": message
-    }
-
-@router.post(
-    "/sessions/refresh",
-    response_model=Token,
-    description=refresh_session_description,
-    responses=refresh_session_responses,
-    openapi_extra={
-        "parameters": [
-            {
-                "in": "header",
-                "name": "X-Refresh-Token",
-                "schema": {"type": "string"},
-                "required": True,
-                "description": "Refresh token для обновления сессии"
-            }
-        ]
-    }
-)
-async def refresh_session(
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    """
-    Обновить сессию, используя refresh token.
-    Создает новую пару access/refresh токенов и обновляет информацию о сессии.
-    
-    Refresh token должен быть передан в заголовке X-Refresh-Token.
-    """
-    # Получаем refresh token из заголовка
-    refresh_token = request.headers.get("x-refresh-token")
-    if not refresh_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token не предоставлен"
-        )
-
-    # Находим сессию по refresh token
-    session = DbSession.get_by_refresh_token(db, refresh_token)
-    if not session:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Недействительный refresh token"
-        )
-
-    # Получаем пользователя
-    user = User.get_by_id(db, session.user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Пользователь не найден"
-        )
-
-    # Создаем новые токены
-    token_data = {
-        "sub": user.email,
-        "user_id": user.id,
-        "role": user.role
-    }
-    new_access_token = token_service.create_access_token(token_data)
-    new_refresh_token = token_service.create_refresh_token(token_data)
-
-    # Обновляем существующую сессию
-    session.update_tokens(db, new_access_token, new_refresh_token)
-
-    return {
-        "access_token": new_access_token,
-        "refresh_token": new_refresh_token,
-        "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "is_active": user.is_active,
-            "role": user.role
-        }
     } 

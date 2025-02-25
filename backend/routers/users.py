@@ -92,32 +92,58 @@ async def update_current_user(
     """
     Обновление информации о текущем пользователе.
     
-    Требует авторизации через Bearer token.
-    Обычные пользователи могут обновлять только свои данные (кроме роли).
-    Администраторы могут обновлять роли пользователей.
+    Для обычных пользователей (role=user):
+    - Можно изменять только full_name, email и password
+    - Все поля опциональные
     
-    Параметры:
-    - **full_name**: Новое имя пользователя (опционально)
-    - **email**: Новый email (опционально)
-    - **password**: Новый пароль (опционально)
-    - **role**: Новая роль (только для администраторов)
-    
-    Returns:
-        UserResponse: Обновленная информация о пользователе
+    Для администраторов (role=admin):
+    - Доступны все поля для изменения
+    - Все поля опциональные
     """
+    # Получаем только заполненные поля
     update_data = user_update.model_dump(exclude_unset=True)
     
-    # Проверяем, что только админ может менять роли
-    if "role" in update_data and current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только администратор может менять роли пользователей"
-        )
+    # Проверяем права доступа
+    if current_user.role != UserRole.ADMIN:
+        # Для обычных пользователей удаляем поля, которые они не могут изменять
+        admin_fields = ['role', 'is_active']
+        for field in admin_fields:
+            if field in update_data:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Поле '{field}' может изменять только администратор"
+                )
     
+    # Проверяем email на уникальность
+    if "email" in update_data and update_data["email"] != current_user.email:
+        existing_user = db.query(User).filter(
+            User.email == update_data["email"],
+            User.id != current_user.id
+        ).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Этот email уже используется"
+            )
+    
+    # Хешируем пароль, если он был предоставлен
     if "password" in update_data:
         update_data["hashed_password"] = User.get_password_hash(update_data.pop("password"))
     
-    return current_user.update(db, **update_data)
+    try:
+        # Обновляем пользователя
+        updated_user = current_user.update(db, **update_data)
+        return updated_user
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при обновлении пользователя"
+        )
 
 @router.delete(
     "/users/me",

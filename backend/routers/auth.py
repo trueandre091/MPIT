@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
+from pydantic import ValidationError
 
 from schemas.auth import Token, TokenData, UserAuth, UserCreate
 from api_descriptions.auth import (
@@ -13,7 +14,8 @@ from api_descriptions.auth import (
     login_responses,
     register_description,
     login_description,
-    refresh_description
+    refresh_description,
+    refresh_responses
 )
 from models.user import User
 from database import get_db
@@ -143,16 +145,24 @@ async def register(
             password=password,
             full_name=full_name
         )
-    except ValueError as e:
+    except ValidationError as e:
+        errors = {}
+        for error in e.errors():
+            field = error["loc"][0]
+            if isinstance(error["ctx"], dict) and "errors" in error["ctx"]:
+                errors[field] = error["ctx"]["errors"]
+            else:
+                errors[field] = [error["msg"]]
+        
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e)
+            detail=errors
         )
     
     # Проверяем, не занят ли email
     if User.get_by_email(db, email=username):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="Этот email уже зарегистрирован"
         )
     
@@ -186,6 +196,7 @@ async def register(
     db.commit()
     db.refresh(session)
     
+    # Возвращаем полную информацию о пользователе
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -194,14 +205,78 @@ async def register(
             "id": db_user.id,
             "email": db_user.email,
             "full_name": db_user.full_name,
-            "role": db_user.role
+            "role": db_user.role,
+            "is_active": db_user.is_active,
+            "created_at": db_user.created_at,
+            "updated_at": db_user.updated_at
         }
     }
 
 @router.post(
     "/auth/login",
     response_model=Token,
-    responses=login_responses,
+    responses={
+        status.HTTP_200_OK: {
+            "description": "Успешная авторизация",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "token_type": "bearer",
+                        "user": {
+                            "id": 1,
+                            "email": "user@example.com",
+                            "full_name": "Иван Иванов",
+                            "role": "user"
+                        }
+                    }
+                }
+            }
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Неверные учетные данные",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Неверный email или пароль"
+                    }
+                }
+            }
+        },
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Ошибка валидации данных",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "validation_error": {
+                            "summary": "Ошибки валидации",
+                            "value": {
+                                "detail": {
+                                    "email": ["Email должен содержать символ @"],
+                                    "password": [
+                                        "Минимальная длина пароля - 8 символов",
+                                        "Пароль должен содержать хотя бы одну заглавную букву (A-Z)",
+                                        "Пароль должен содержать хотя бы одну цифру (0-9)"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "description": "Аккаунт заблокирован",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Аккаунт неактивен или заблокирован"
+                    }
+                }
+            }
+        }
+    },
     description=login_description
 )
 async def login(
@@ -214,20 +289,44 @@ async def login(
     """
     # Проверяем формат email
     try:
-        UserAuth.model_validate({"email": form_data.username, "password": form_data.password})
-    except ValueError:
+        UserAuth.model_validate({
+            "email": form_data.username, 
+            "password": form_data.password
+        })
+    except ValidationError as e:
+        errors = {}
+        for error in e.errors():
+            field = error["loc"][0]
+            if isinstance(error["ctx"], dict) and "errors" in error["ctx"]:
+                errors[field] = error["ctx"]["errors"]
+            else:
+                errors[field] = [error["msg"]]
+        
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid email format"
+            detail=errors
         )
 
-    # Аутентифицируем пользователя
-    user = User.authenticate(db, email=form_data.username, password=form_data.password)
+    # Получаем пользователя
+    user = User.get_by_email(db, email=form_data.username)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Неверный email или пароль"
+        )
+
+    # Проверяем активность аккаунта
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Аккаунт неактивен или заблокирован"
+        )
+
+    # Проверяем пароль
+    if not User.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный email или пароль"
         )
     
     # Создаем токены
@@ -264,14 +363,83 @@ async def login(
             "id": user.id,
             "email": user.email,
             "full_name": user.full_name,
-            "role": user.role
+            "role": user.role,
+            "is_active": user.is_active,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at
         }
     }
 
 @router.post(
     "/auth/logout",
     response_model=dict,
-    description="Выход из системы"
+    description="Выход из системы (завершение текущей сессии)",
+    responses={
+        status.HTTP_200_OK: {
+            "description": "Успешный выход",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "success": {
+                            "summary": "Сессия завершена",
+                            "value": {"message": "Успешный выход из системы"}
+                        },
+                        "already_logged_out": {
+                            "summary": "Уже завершена",
+                            "value": {"message": "Сессия уже была завершена"}
+                        }
+                    }
+                }
+            }
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Отсутствует токен",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Отсутствует токен авторизации"
+                    }
+                }
+            }
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "description": "Срок действия токена истек",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Срок действия токена истек"
+                    }
+                }
+            }
+        },
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Недействительный токен",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid_signature": {
+                            "summary": "Неверная подпись",
+                            "value": {
+                                "detail": "Токен поврежден или подделан"
+                            }
+                        },
+                        "invalid_format": {
+                            "summary": "Неверный формат",
+                            "value": {
+                                "detail": "Неверный формат токена"
+                            }
+                        },
+                        "invalid_type": {
+                            "summary": "Неверный тип",
+                            "value": {
+                                "detail": "Неверный тип токена (ожидается access)"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 )
 async def logout(
     request: Request,
@@ -279,21 +447,58 @@ async def logout(
     db: Session = Depends(get_db)
 ):
     """
-    Выход из системы (удаление текущей сессии)
-    """
-    # Получаем текущую сессию по access token
-    current_token = request.headers.get("authorization").split()[1]
-    session = db.query(DbSession).filter(
-        DbSession.user_id == current_user.id,
-        DbSession.access_token == current_token,
-        DbSession.is_active == True
-    ).first()
-
-    if session:
-        session.delete(db)
-        return {"message": "Успешный выход из системы"}
+    Выход из системы (завершение текущей сессии)
     
-    return {"message": "Сессия уже была завершена"}
+    Требуется передать:
+    - Действующий access token в заголовке Authorization
+    
+    При успешном выходе:
+    - Текущая сессия деактивируется
+    - Все связанные токены становятся недействительными
+    """
+    try:
+        # Получаем токен из заголовка
+        auth_header = request.headers.get("authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Отсутствует токен авторизации"
+            )
+        
+        current_token = auth_header.split()[1]
+        
+        # Проверяем токен
+        payload, error = token_service.verify_token(current_token, expected_type="access")
+        if error:
+            error_codes = {
+                TokenError.EXPIRED: (status.HTTP_403_FORBIDDEN, "Срок действия токена истек"),
+                TokenError.INVALID_TYPE: (status.HTTP_422_UNPROCESSABLE_ENTITY, "Неверный тип токена (ожидается access)"),
+                TokenError.INVALID_SIGNATURE: (status.HTTP_422_UNPROCESSABLE_ENTITY, "Токен поврежден или подделан"),
+                TokenError.MALFORMED: (status.HTTP_422_UNPROCESSABLE_ENTITY, "Неверный формат токена")
+            }
+            status_code, detail = error_codes.get(error, (status.HTTP_422_UNPROCESSABLE_ENTITY, "Недействительный токен"))
+            raise HTTPException(status_code=status_code, detail=detail)
+
+        # Находим и деактивируем сессию
+        session = db.query(DbSession).filter(
+            DbSession.user_id == current_user.id,
+            DbSession.access_token == current_token,
+            DbSession.is_active == True
+        ).first()
+
+        if session:
+            session.delete(db)
+            return {"message": "Успешный выход из системы"}
+        
+        return {"message": "Сессия уже была завершена"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Ошибка при выходе из системы"
+        )
 
 def parse_user_agent(user_agent: str) -> dict:
     """Парсинг User-Agent для получения информации об устройстве"""
@@ -324,6 +529,83 @@ def parse_user_agent(user_agent: str) -> dict:
     "/auth/refresh",
     response_model=Token,
     description=refresh_description,
+    responses={
+        status.HTTP_200_OK: {
+            "description": "Токены успешно обновлены",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "token_type": "bearer",
+                        "user": {
+                            "id": 1,
+                            "email": "user@example.com",
+                            "full_name": "Иван Иванов",
+                            "role": "user"
+                        }
+                    }
+                }
+            }
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Отсутствует токен",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Refresh token не предоставлен"
+                    }
+                }
+            }
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "description": "Срок действия токена истек",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Срок действия токена истек"
+                    }
+                }
+            }
+        },
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Недействительный токен",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid_signature": {
+                            "summary": "Неверная подпись",
+                            "value": {
+                                "detail": "Токен поврежден или подделан"
+                            }
+                        },
+                        "invalid_format": {
+                            "summary": "Неверный формат",
+                            "value": {
+                                "detail": "Неверный формат токена"
+                            }
+                        },
+                        "invalid_type": {
+                            "summary": "Неверный тип",
+                            "value": {
+                                "detail": "Неверный тип токена (ожидается refresh)"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Пользователь не найден",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Пользователь не найден"
+                    }
+                }
+            }
+        }
+    },
     openapi_extra={
         "parameters": [
             {
@@ -356,28 +638,29 @@ async def refresh_token(
     # Проверяем refresh token
     payload, error = token_service.verify_token(refresh_token, expected_type="refresh")
     if error:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Недействительный refresh token",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
+        error_codes = {
+            TokenError.EXPIRED: (status.HTTP_403_FORBIDDEN, "Срок действия токена истек"),
+            TokenError.INVALID_TYPE: (status.HTTP_422_UNPROCESSABLE_ENTITY, "Неверный тип токена (ожидается refresh)"),
+            TokenError.INVALID_SIGNATURE: (status.HTTP_422_UNPROCESSABLE_ENTITY, "Токен поврежден или подделан"),
+            TokenError.MALFORMED: (status.HTTP_422_UNPROCESSABLE_ENTITY, "Неверный формат токена")
+        }
+        status_code, detail = error_codes.get(error, (status.HTTP_422_UNPROCESSABLE_ENTITY, "Недействительный токен"))
+        raise HTTPException(status_code=status_code, detail=detail)
 
     # Находим сессию по refresh token
     session = DbSession.get_by_refresh_token(db, refresh_token)
     if not session:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Сессия не найдена или истекла",
-            headers={"WWW-Authenticate": "Bearer"}
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Сессия не найдена или истекла"
         )
 
     # Получаем пользователя
     user = User.get_by_id(db, session.user_id)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Пользователь не найден",
-            headers={"WWW-Authenticate": "Bearer"}
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пользователь не найден"
         )
 
     # Создаем новые токены
@@ -400,21 +683,48 @@ async def refresh_token(
             "id": user.id,
             "email": user.email,
             "full_name": user.full_name,
-            "role": user.role
+            "role": user.role,
+            "is_active": user.is_active,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at
+        }
+    } 
+
+@router.get(
+    "/auth/verify",
+    status_code=status.HTTP_200_OK,
+    description="Проверка валидности токена",
+    responses={
+        status.HTTP_200_OK: {
+            "description": "Токен действителен",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Токен действителен"
+                    }
+                }
+            }
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Токен недействителен",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Недействительный токен"
+                    }
+                }
+            }
         }
     }
+)
+async def verify_token(current_user: User = Depends(get_current_user)):
+    """
+    Проверка валидности токена.
+    
+    Если токен действителен, возвращает 200 OK.
+    Если токен недействителен, возвращает 401 Unauthorized.
+    """
+    return {"detail": "Токен действителен"}
 
-@router.get("/auth/me")
-async def get_me(current_user: User = Depends(get_current_user)):
-    """
-    Получение информации о текущем пользователе
-    """
-    return {
-        "id": current_user.id,
-        "email": current_user.email,
-        "full_name": current_user.full_name,
-        "is_active": current_user.is_active,
-        "role": current_user.role,
-        "created_at": current_user.created_at,
-        "updated_at": current_user.updated_at
-    } 
+
+
