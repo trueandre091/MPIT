@@ -2,3 +2,7 @@
 /backend/schemas/__pycache__
 /backend/api_descriptions/__pycache__
 /backend/routers/__pycache__
+/backend_old/api_descriptions/__pycache__
+*.pyc
+*.pyc
+/backend/routers/__pycache__

@@ -1,95 +1,63 @@
-from sqlalchemy import Boolean, Column, Integer, String, DateTime
-from sqlalchemy.sql import func
-from sqlalchemy.orm import Session, relationship
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy.orm import relationship, Session
 from database import Base
-from schemas.auth import UserCreate
-from fastapi import HTTPException, status
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from datetime import datetime, UTC
+import bcrypt
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
-    full_name = Column(String)
-    hashed_password = Column(String)
+    password = Column(String)
+    name = Column(String)
     role = Column(String, default="user")
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=False), server_default=func.now())
-    updated_at = Column(DateTime(timezone=False), server_default=func.now(), onupdate=func.now())
-
-    # Связь с сессиями
-    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    created_at = Column(DateTime, default=datetime.now(UTC))
+    updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
     @classmethod
-    def get_by_email(cls, db: Session, email: str):
-        """Получить пользователя по email"""
-        return db.query(cls).filter(cls.email == email).first()
-
-    @classmethod
-    def get_by_id(cls, db: Session, user_id: int):
-        """Получить пользователя по ID"""
-        return db.query(cls).filter(cls.id == user_id).first()
-
-    @classmethod
-    def create(cls, db: Session, user_data: UserCreate, hashed_password: str):
-        """Создать нового пользователя"""
-        db_user = cls(
-            email=user_data.email,
-            full_name=user_data.full_name,
-            hashed_password=hashed_password
-        )
+    def create(cls, db: Session, email: str, password: str, name: str):
+        db_user = cls(email=email, password=cls._hash_password(password), name=name)
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
         return db_user
-
+    
     @classmethod
-    def authenticate(cls, db: Session, email: str, password: str):
-        """Аутентифицировать пользователя"""
-        user = cls.get_by_email(db, email)
-        if not user:
-            return None
-        if not cls.verify_password(password, user.hashed_password):
-            return None
-        return user
-
+    def get_by_email(cls, db: Session, email: str):
+        return db.query(cls).filter(cls.email == email).first()
+    
+    @classmethod
+    def get_by_id(cls, db: Session, id: int):
+        return db.query(cls).filter(cls.id == id).first()
+    
     @staticmethod
-    def verify_password(plain_password: str, hashed_password: str) -> bool:
-        """Проверить пароль"""
-        return pwd_context.verify(plain_password, hashed_password)
-
+    def _hash_password(password: str):
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
     @staticmethod
-    def get_password_hash(password: str) -> str:
-        """Получить хеш пароля"""
-        return pwd_context.hash(password)
-
-    def update(self, db: Session, **kwargs):
-        """Обновить данные пользователя"""
+    def _check_password(password: str, hashed_password: str):
+        return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+    
+    @classmethod
+    def update(cls, db: Session, id: int, **kwargs):
+        db_user = db.query(cls).filter(cls.id == id).first()
         for key, value in kwargs.items():
-            if value is not None and hasattr(self, key):
-                if key == 'email' and value != self.email:
-                    # Проверяем, не занят ли email другим пользователем
-                    existing_user = db.query(User).filter(
-                        User.email == value,
-                        User.id != self.id
-                    ).first()
-                    if existing_user:
-                        raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Email already registered"
-                        )
-                setattr(self, key, value)
-        
-        self.updated_at = func.now()
+            if key not in [attr.name for attr in cls.__table__.columns]:
+                continue
+            setattr(db_user, key, value)
         db.commit()
-        db.refresh(self)
-        return self
+        db.refresh(db_user)
+        return db_user
+    
 
-    def delete(self, db: Session):
-        """Удалить пользователя"""
-        db.delete(self)
-        db.commit()
-        return {"message": "Пользователь успешно удален"} 
+
+    
+    
+    
+    
+    
+    
+    
+    

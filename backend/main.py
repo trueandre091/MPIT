@@ -1,77 +1,40 @@
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from routers import auth, users, sessions
-from config.settings import get_settings
+from settings import get_settings
+from database import create_db
+from contextlib import asynccontextmanager
+
+from routers import auth
 
 settings = get_settings()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not settings.DB_CREATED:
+        create_db()
+        settings.DB_CREATED = True
+    yield
+
 app = FastAPI(
-    title=settings.APP_NAME,
-    description="API для веб и мобильных приложений",
-    version=settings.APP_VERSION,
-    docs_url=settings.DOCS_URL,
-    redoc_url=settings.REDOC_URL,
-    openapi_url=settings.OPENAPI_URL
+    title="Easy API",
+    description="API для Easy App",
+    lifespan=lifespan
 )
 
-# Добавляем описание безопасности для Swagger UI
-app.swagger_ui_init_oauth = {
-    "usePkceWithAuthorizationCodeGrant": True,
-}
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Описание схемы безопасности
-app.openapi_components = {
-    "securitySchemes": {
-        "bearerAuth": {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT"
-        }
-    }
-}
-
-# Глобальные настройки безопасности
-app.openapi_security = [{"bearerAuth": []}]
-
-# Подключаем роутеры
-app.include_router(auth.router, prefix=settings.API_PREFIX, tags=["Auth"])
-app.include_router(users.router, prefix=settings.API_PREFIX, tags=["Users"])
-app.include_router(sessions.router, prefix=settings.API_PREFIX, tags=["Sessions"])
+# routes
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
 @app.get("/")
 async def root():
-    """
-    Корневой эндпоинт с информацией о состоянии API
-    """
-    response = {
-        "name": settings.APP_NAME,
-        "version": settings.APP_VERSION,
-        "environment": settings.ENVIRONMENT,
-        "status": "online"
-    }
-    
-    # Добавляем ссылки на документацию только в режиме разработки
-    if settings.DEBUG:
-        response.update({
-            "docs": f"{settings.API_PREFIX}/docs",
-            "redoc": f"{settings.API_PREFIX}/redoc",
-            "openapi": f"{settings.API_PREFIX}/openapi.json"
-        })
-    
-    return response
+    return {"detail": "Hello World"}
 
-@app.middleware("http")
-async def add_environment_header(request: Request, call_next):
-    """Добавляем информацию об окружении в заголовки ответа"""
-    response = await call_next(request)
-    response.headers["X-Environment"] = settings.ENVIRONMENT
-    return response 
+
+
+
+
+
+
+
+
+
+
+
