@@ -1,7 +1,9 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ARRAY
 from sqlalchemy.orm import relationship, Session
 from database import Base
 from datetime import datetime, UTC
+from models.plant import Plant
+from models.note import Note
 import bcrypt
 
 class User(Base):
@@ -15,6 +17,9 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now(UTC))
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+
+    plants = relationship("Plant", back_populates="user")
+    notes = relationship("Note", back_populates="user")
 
     @classmethod
     def create(cls, db: Session, email: str, password: str, name: str):
@@ -50,8 +55,19 @@ class User(Base):
         db.commit()
         db.refresh(db_user)
         return db_user
-    
 
+    def to_dict(self, full: bool = False):
+        return {
+            "id": self.id,
+            "email": self.email,
+            "name": self.name,
+            "role": self.role,
+            "plants": [plant.to_dict() for plant in self.plants] if full else [plant.id for plant in self.plants],
+            "notes": [note.to_dict() for note in self.notes] if full else [note.id for note in self.notes],
+            "is_active": self.is_active,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
+        }
 
     
     

@@ -14,7 +14,10 @@ class Settings:
     
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here")
     TOKEN_EXPIRE_MINUTES: int = int(os.getenv("TOKEN_EXPIRE_MINUTES", 5))
-    
+
+    BASE_DIR: str = os.path.dirname(os.path.abspath(__file__))
+    MEDIA_ROOT: str = os.path.join(BASE_DIR, "media")
+    MEDIA_URL: str = "/media/"
 
 @lru_cache
 def get_settings():

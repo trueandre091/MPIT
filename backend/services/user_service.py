@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-
+from datetime import datetime
 
 def validate_email(email: str):
     if any(
@@ -51,6 +51,4 @@ class UserCreate:
         self.email = email
         self.password = password
         self.name = name
-
-
 

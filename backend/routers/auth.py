@@ -1,7 +1,4 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Form
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-import os
 from database import get_db
 from sqlalchemy.orm import Session
 from settings import get_settings
@@ -9,7 +6,7 @@ from settings import get_settings
 from services.auth_service import AuthService
 from services.user_service import UserCreate
 
-from models.user import User
+from models.user import User    
 
 settings = get_settings()
 router = APIRouter()
@@ -32,12 +29,7 @@ async def register(
     
     return {
         "token": token,
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role
-        }
+        "user": user.to_dict()
     }
 
 
@@ -59,12 +51,7 @@ async def login(
     token = auth_service.create_token({"sub": str(user.id)})
     return {
         "token": token,
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role
-        }
+        "user": user.to_dict(True)
     }
 
 @router.get("/me", status_code=status.HTTP_200_OK)
@@ -73,12 +60,7 @@ async def me(
     db: Session = Depends(get_db)
 ):
     return {
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role
-        }
+        "user": user.to_dict()
     }
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
@@ -87,7 +69,10 @@ async def logout(
     db: Session = Depends(get_db)
 ):
     User.update(db, user.id, is_active=False)
-    return {"detail": "Logged out"}
+    return {
+        "user": user.to_dict(),
+        "detail": "Logged out"
+    }
 
 
 
