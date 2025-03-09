@@ -30,7 +30,7 @@ app.include_router(plants.router, prefix="/api/plants", tags=["plants"])
 app.include_router(notes.router, prefix="/api/notes", tags=["notes"])
 
 
-@app.get("/")
+@app.get("/api/")
 async def root():
     return {"detail": "Hello World"}
 

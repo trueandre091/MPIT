@@ -1,0 +1,7 @@
+#Sun Mar 09 21:36:29 EET 2025
+base.1=D\:\\MPIT\\frontend\\build\\app\\intermediates\\dex\\debug\\mergeDexDebug\\classes2.dex
+path.1=classes2.dex
+base.0=D\:\\MPIT\\frontend\\build\\app\\intermediates\\dex\\debug\\mergeDexDebug\\classes.dex
+renamed.1=classes2.dex
+renamed.0=classes.dex
+path.0=classes.dex

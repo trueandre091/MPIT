@@ -30,12 +30,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   table_calendar: ^3.0.9
-  intl: ^0.18.0
+  google_fonts: ^6.1.0
+  intl: ^0.18.1
+  http: ^1.2.0
+  shared_preferences: ^2.2.2
+  jwt_decoder: ^2.0.1
+  image_picker: ^1.1.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
+  http_parser: ^4.0.0
 
 dev_dependencies:
   flutter_test:
@@ -46,7 +54,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^2.0.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -73,47 +81,7 @@ flutter:
   # in this "flutter" section. Each entry in this list should have a
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
-  fonts:
-  - family: Mulish
-    fonts:
-      - asset: fonts/Mulish-Regular.ttf
-      - asset: fonts/Mulish-Bold.ttf
-      - asset: fonts/Mulish-Italic.ttf
-      - asset: fonts/Mulish-BoldItalic.ttf
-      - asset: fonts/Mulish-Medium.ttf
-      - asset: fonts/Mulish-MediumItalic.ttf
-      - asset: fonts/Mulish-SemiBold.ttf
-      - asset: fonts/Mulish-SemiBoldItalic.ttf
-      - asset: fonts/Mulish-Light.ttf
-      - asset: fonts/Mulish-LightItalic.ttf
-      - asset: fonts/Mulish-ExtraLight.ttf
-      - asset: fonts/Mulish-Black.ttf
-  - family: Montserrat
-    fonts:
-      - asset: fonts/Montserrat-Regular.ttf
-      - asset: fonts/Montserrat-Bold.ttf
-      - asset: fonts/Montserrat-Italic.ttf
-      - asset: fonts/Montserrat-BoldItalic.ttf
-      - asset: fonts/Montserrat-Medium.ttf
-      - asset: fonts/Montserrat-MediumItalic.ttf
-      - asset: fonts/Montserrat-SemiBold.ttf
-      - asset: fonts/Montserrat-SemiBoldItalic.ttf
-      - asset: fonts/Montserrat-Thin.ttf
-      - asset: fonts/Montserrat-ThinItalic.ttf
-      - asset: fonts/Montserrat-Light.ttf
-  - family: MuseoModerno
-    fonts:
-      - asset: fonts/MuseoModerno-Black.ttf
-      - asset: fonts/MuseoModerno-Bold.ttf
-      - asset: fonts/MuseoModerno-Medium.ttf
-      - asset: fonts/MuseoModerno-Regular.ttf
-      - asset: fonts/MuseoModerno-SemiBold.ttf
-      - asset: fonts/MuseoModerno-Thin.ttf
-      - asset: fonts/MuseoModerno-ExtraBold.ttf
-      
-      
-      
-      
+  # example:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
